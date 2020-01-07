@@ -14,7 +14,7 @@ def extract_image(file):
     counter = 0
     for session in sessions:
         jpeg = b""
-        for packet in sessions[session]:
+        for packet in sessions[session]: # Already filtered the packets to only include IP and TCP packets
             payload = bytes(packet[TCP].payload)
             start_jpeg = payload.find(b"--frame\r\nContent-Type: image/jpeg\r\n\r\n") # Can find the jpeg file header 0xFFD8 too
             # if start_jpeg != -1:
@@ -22,14 +22,11 @@ def extract_image(file):
             if start_jpeg == -1: 
                 jpeg += payload
             else: # found the start of jpeg image
-                if counter == 0: # skip the 1st one
-                    jpeg = b""
-                    counter += 1
-                    continue
                 if start_jpeg > 2: # append the data before the HTTP header
                     jpeg += payload[:start_jpeg-2]
-                with open("output/{}.jpg".format(counter), "wb") as f: 
-                    f.write(jpeg)
+                if len(jpeg) != 0: # prevent the 0.jpg with size 0 from being saved for the first frame packet with --frame at start of the HTTP payload
+                    with open("output/{}.jpg".format(counter), "wb") as f: 
+                            f.write(jpeg)
                 counter += 1
                 # reset jpeg to the data after header 
                 jpeg = payload[start_jpeg+37:] # len(b"--frame\r\nContent-Type: image/jpeg\r\n\r\n") = 37
